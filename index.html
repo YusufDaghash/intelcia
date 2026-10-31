@@ -628,6 +628,10 @@ function goal(s){
  if(rate>0){const want=s.net+gap/rate;
   [['l0','lines without port/device'],['l1','lines with port or device'],['l2','lines with port and device'],['pu','plan upgrades'],['dp','device protection'],['du','device upgrades']].forEach(t=>{
    let k=0;for(let n=1;n<=300;n++){const a=Object.assign({},s.inc);a[t[0]]+=n;if(incNet(a)>=want){k=n;break}}
+     if(rate>0){const need=s.net+gap/rate-s.net,nd=(key,fr)=>{for(let n=1;n<=300;n++){const a=Object.assign({},s.inc);a[key]+=n;if(incNet(a)-s.net>=need*fr)return n}return 0};
+  const m1=nd('l1',.5),mp=nd('pu',.25),md=nd('dp',.25);
+  if(m1&&mp&&md){const a=Object.assign({},s.inc);a.l1+=m1;a.pu+=mp;a.dp+=md;
+   L.push(`Or combine incentives (50% / 25% / 25% of the gap): <b>+${m1}</b> lines with port or device, <b>+${mp}</b> plan upgrades and <b>+${md}</b> device protection: about <b>+${f((incNet(a)-s.net)*rate)} EGP</b> after tax.`)}}
    if(k)I.push(`<b>+${k}</b> ${t[1]}`)})}
  if(I.length)L.push(`Or earn it from incentives. Any <b>one</b> of these on top of today's figures (after 20% tax):<ul>`+I.map(x=>'<li>'+x+'</li>').join('')+`</ul>`);
  h+=`<div class='sub'>Ways to close the gap</div>`;
