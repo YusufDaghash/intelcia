@@ -626,7 +626,7 @@ function goal(s){
   for(let x=0.5;x<=80;x+=0.5){const pay=s.chal&&x>=s.minH?otEligPay(x,hr,s.std,s.flat):x*hr*s.std;if(pay>=gap){ot=x;p=pay;break}}
   if(ot)L.push(`Work <b>${f(ot,1)} hrs of overtime</b> in a week`+(s.chal&&ot>=s.minH?` (needs ≥ ${f(s.minH,1)} hrs OT, weekly ABS ≤ ${f(s.absMax,1)}%, and ≥ ${f(s.gate,1)} hrs worked that week)`:'')+`: about <b>+${f(p)} EGP</b>.`)}
  if(rate>0){const want=s.net+gap/rate;
-  [['l0','lines without port/device'],['l1','lines with port or device'],['l2','lines with port and device'],['acc','created accounts with multiple lines'],['pu','plan upgrades'],['dp','device protection'],['du','device upgrades']].forEach(t=>{
+  [['l0','lines without port/device'],['l1','lines with port or device'],['l2','lines with port and device'],['pu','plan upgrades'],['dp','device protection'],['du','device upgrades']].forEach(t=>{
    let k=0;for(let n=1;n<=300;n++){const a=Object.assign({},s.inc);a[t[0]]+=n;if(incNet(a)>=want){k=n;break}}
    if(k)I.push(`<b>+${k}</b> ${t[1]}`)})}
  if(I.length)L.push(`Or earn it from incentives. Any <b>one</b> of these on top of today's figures (after 20% tax):<ul>`+I.map(x=>'<li>'+x+'</li>').join('')+`</ul>`);
