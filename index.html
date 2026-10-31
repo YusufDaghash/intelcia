@@ -6,9 +6,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Salary &amp; Absenteeism Calculator</title>
 <meta name="description" content="Estimate your monthly salary (base pay, transport, KPIs, incentives, overtime) and track your monthly absenteeism percentage against target.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
 <style>
 /* ===================== SALARY CALCULATOR (unchanged) ===================== */
 :root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mu:#667085;--bd:#e3e6ea;--ac:#ed2880;--ok:#15803d;--bad:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -16,8 +18,9 @@
 :root[data-theme="dark"]{--bg:#111418;--card:#1b2027;--tx:#eceff3;--mu:#98a2b3;--bd:#2d343d;--ac:#ed2880;--ok:#4ade80;--bad:#f87171}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-main{max-width:640px;margin:0 auto;padding:16px}
+main{max-width:840px;margin:0 auto;padding:16px}
 h1{font-size:22px;margin:8px 0 16px}
+#salary-view h1{font-size:36px;color:var(--ac);text-align:center;font-family:Impact,"Arial Narrow Bold",sans-serif;font-weight:400;letter-spacing:.03em}
 section{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
 h2{font-size:15px;margin:0 0 10px;color:var(--ac)}
 .g{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -29,7 +32,7 @@ input,select{width:100%;margin-top:3px;padding:9px;font-size:16px;border:1px sol
 .r b{text-align:right}
 .tot{background:var(--ac);color:#fff;border-radius:12px;padding:16px;text-align:center;margin-bottom:12px}
 .tot small{opacity:.85;display:block}
-.tot big{font-size:32px;font-weight:700;display:block}
+.tot big{font-size:32px;font-weight:700;display:block;font-family:"Arial Black",Arial,sans-serif}
 .ok{color:var(--ok)}.bad{color:var(--bad)}
 .note{font-size:13px;color:var(--mu);margin:0;padding-left:18px}.note li{margin-bottom:6px}.note b{color:var(--tx)}
 .hint{font-size:13px;color:var(--mu);margin:0 0 10px}
@@ -43,12 +46,41 @@ summary{font-size:14px;font-weight:700;color:var(--ac);cursor:pointer}
 .wkh{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--tx);margin-bottom:6px}
 .sub{font-size:13px;font-weight:600;color:var(--ac);padding:10px 0 2px;border-bottom:1px solid var(--bd)}
 #goalbox ul ul{margin:6px 0 0;padding-left:18px}
-.part{padding:0}
-.part>details{margin:0}
-.part>details>summary{padding:14px;font-size:15px}
-.part>details[open]>summary{border-bottom:1px solid var(--bd)}
-.part>details>.pb{padding:14px}
-@media (min-width:1280px){#goalbox{position:fixed;top:84px;left:calc(50% + 336px);width:320px;max-height:calc(100vh - 104px);overflow:auto;margin:0}}
+#goalbox details,.bk details{margin-top:0}
+#goalbox summary,.bk summary{font-size:15px}
+#goalbox details[open]>summary,.bk details[open]>summary{margin-bottom:10px}
+.ohr{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.chal{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--tx);white-space:nowrap;cursor:pointer}
+.chal input{width:auto;margin:0}
+.sm{font-size:11px;font-weight:400;color:var(--mu)}
+.amt{float:right;color:var(--ok);font-weight:700;font-size:14px}
+.ohr .amt{float:none}
+.amt.neg{color:var(--bad)}
+#authwall{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.authbox{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:20px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px}
+.authtitle{margin:0;text-align:center;font-size:22px;color:var(--ac)}
+#authform,#newpass{display:flex;flex-direction:column;gap:12px}
+.authtabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.atab{font:inherit;font-weight:700;padding:9px;border-radius:10px;border:1px solid var(--bd);background:transparent;color:var(--tx);cursor:pointer}
+.atab[aria-selected="true"]{background:var(--ac);border-color:var(--ac);color:#fff}
+.abtn{font:inherit;font-weight:700;padding:11px;border-radius:10px;border:0;background:var(--ac);color:#fff;cursor:pointer;width:100%}
+.abtn:disabled{opacity:.6;cursor:default}
+.amsg{margin:0;font-size:13px;color:var(--mu);min-height:1.2em}.amsg.bad{color:var(--bad)}
+.acct{max-width:960px;margin:0 auto;padding:0 16px 8px;display:flex;justify-content:flex-end;align-items:center;gap:12px;font-size:12px;color:var(--mu)}
+.lo{font:inherit;font-size:12px;font-weight:700;color:var(--ac);background:none;border:1px solid var(--ac);border-radius:8px;padding:3px 10px;cursor:pointer}
+.xr{display:flex;justify-content:flex-start;align-items:center;gap:10px;padding:10px 14px}
+.xr h2{margin:0}
+.xr input{width:96px;margin:0;padding:7px 9px;text-align:center}
+.bk details details{margin-top:12px}
+details:not([open])>summary .otw{display:none}
+.ck{margin-left:4px}
+.act{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd);font-size:14px;font-weight:600}
+.stp{display:flex;align-items:center;gap:8px}
+.stp input{width:52px;margin:0;padding:6px;text-align:center;font-weight:600;-moz-appearance:textfield}
+.stp input::-webkit-outer-spin-button,.stp input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.stb{border:0;background:var(--ac);color:#fff;border-radius:50%;width:30px;height:30px;font-size:20px;line-height:1;cursor:pointer;padding:0}
+.oh{flex-wrap:wrap;gap:8px}
+@media (min-width:1560px){#goalbox{position:fixed;top:84px;left:calc(50% + 436px);width:320px;max-height:calc(100vh - 104px);overflow:auto;margin:0}}
 
 /* ===================== PAGE SHELL: TOP TABS ===================== */
 [hidden]{display:none!important}
@@ -166,6 +198,9 @@ body{display:flex;flex-direction:column;min-height:100vh}
 #absence-view dl.stats dd.strong{font-weight:600}
 #absence-view dl.stats dd.good{color:var(--good)}
 #absence-view dl.stats dd.bad{color:var(--bad)}
+#absence-view dl.stats .hl{background:var(--accent-soft);border-top-color:var(--accent);border-bottom:1px solid var(--accent);font-weight:700}
+#absence-view dl.stats dt.hl{padding-left:12px;border-radius:8px 0 0 8px;color:var(--fg)}
+#absence-view dl.stats dd.hl{padding-right:12px;border-radius:0 8px 8px 0;color:var(--accent-text)}
 
 #absence-view .scen{display:flex;flex-direction:column;gap:8px}
 #absence-view .scen-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);flex-wrap:wrap}
@@ -179,7 +214,28 @@ body{display:flex;flex-direction:column;min-height:100vh}
 </head>
 <body>
 
+<div id="authwall" hidden>
+ <div class="authbox">
+  <h2 class="authtitle">Salary Calculator</h2>
+  <div id="authload" class="amsg">Loading…</div>
+  <form id="authform" hidden>
+   <div class="authtabs"><button type="button" class="atab" data-m="in" aria-selected="true">Log in</button><button type="button" class="atab" data-m="up" aria-selected="false">Sign up</button></div>
+   <label>Work email<input type="email" id="aemail" autocomplete="email" required></label>
+   <label>Password<input type="password" id="apass" autocomplete="current-password" minlength="8" required></label>
+   <button type="submit" id="asubmit" class="abtn">Log in</button>
+   <p id="amsg" class="amsg" role="status"></p>
+   <a href="#" id="aforgot" class="ck">Forgot password?</a>
+  </form>
+  <form id="newpass" hidden>
+   <label>New password<input type="password" id="np" autocomplete="new-password" minlength="8" required></label>
+   <button type="submit" class="abtn">Save new password</button>
+   <p id="npmsg" class="amsg" role="status"></p>
+  </form>
+ </div>
+</div>
+
 <nav class="topnav" aria-label="Calculators">
+  <div class="acct" id="acct" hidden><span id="acctmail"></span><span id="savest"></span><button type="button" class="lo" id="logout">Log out</button></div>
   <div class="topnav-in" role="tablist">
     <button type="button" role="tab" class="navtab" id="nav-salary" data-view="salary" aria-selected="true" aria-controls="salary-view">Salary calculator</button>
     <button type="button" role="tab" class="navtab" id="nav-absence" data-view="absence" aria-selected="false" aria-controls="absence-view">Absenteeism calculator</button>
@@ -193,37 +249,51 @@ body{display:flex;flex-direction:column;min-height:100vh}
 
 <div class="tot"><small>Final total (EGP)</small><big id="total">0</big><small id="totalUsd"></small></div>
 
-<section id="goalbox" class="part"><details id="goaldet"><summary>Salary goal</summary><div class="pb">
+<section id="goalbox"><details><summary>Salary goal</summary>
 <p class="hint">Enter the monthly salary you want. You will get ideas for reaching it, based on the numbers you entered below.</p>
 <label>Target salary (EGP)<input type="number" id="goal" min="0" step="100" placeholder="e.g. 15000"></label>
-<div id="goalout"></div></div></details></section>
+<div id="goalout"></div></details></section>
 
-<section><h2>Pay cycles</h2><ul class="note">
-<li><b>Working days:</b> from the 16th of the previous month to the 15th of the current month.</li>
+<section class="bk"><details><summary>Pay cycles</summary><ul class="note">
+<li><b>Scheduled days:</b> from the 16th of the previous month to the 15th of the current month.</li>
 <li><b>Transportation allowance:</b> covers the 1st to the 30th of the previous month.</li>
 <li><b>Incentives:</b> paid 2 months later (e.g. incentives achieved in July are paid in the September salary).</li>
-</ul></section>
+</ul></details></section>
 
-<section><h2>Exchange rate</h2>
-<label>1 USD = ? EGP<input type="number" id="rate" value="50" step="0.01" min="0"></label></section>
-
-<section><h2>Base pay</h2>
+<section><h2>Base pay<span class="amt" id="amt-base"></span></h2>
 <div class="g">
-<label>Working days<input type="number" id="days" value="22" min="0"></label>
+<label>Scheduled days <span class="sm">(including leaves)</span><input type="number" id="days" value="22" min="0"></label>
+<label>Annual / casual / exam leave days<input type="number" id="lv" value="0" step="1" min="0"></label>
+<label>Sick leave days <span class="sm">(paid at 70%)</span><input type="number" id="sl" value="0" step="1" min="0"></label>
 <label>ABS %<input type="number" id="abs" value="0" step="0.1" min="0"></label>
 <label>Absent hours<input type="number" id="absh" value="0" step="0.5" min="0"></label>
 </div>
 <div class="g" style="margin-top:10px">
-<label>Hourly rate (EGP)<input type="number" id="hr" value="56"></label>
-<label>Transport per day (EGP)<input type="number" id="tr" value="181"></label>
+<label>Hourly rate (EGP)<input type="number" id="hr" value="56.82" step="0.01"></label>
+<label>Transport per day (EGP)<input type="number" id="tr" value="181.81" step="0.01"></label>
 </div></section>
 
-<section><h2>KPIs</h2>
+<section class="bk"><details><summary>Got Actions?<span class="amt neg" id="amt-act"></span></summary>
+<div class="act"><span>Level 1</span><div class="stp"><button type="button" class="stb" data-n="n1" data-d="-1" aria-label="Decrease Level 1">−</button><input type="number" id="n1" value="0" readonly><button type="button" class="stb" data-n="n1" data-d="1" aria-label="Increase Level 1">+</button></div></div>
+<div class="act"><span>Level 2</span><div class="stp"><button type="button" class="stb" data-n="n2" data-d="-1" aria-label="Decrease Level 2">−</button><input type="number" id="n2" value="0" readonly><button type="button" class="stb" data-n="n2" data-d="1" aria-label="Increase Level 2">+</button></div></div>
+<div class="act"><span>Level 3</span><div class="stp"><button type="button" class="stb" data-n="n3" data-d="-1" aria-label="Decrease Level 3">−</button><input type="number" id="n3" value="0" readonly><button type="button" class="stb" data-n="n3" data-d="1" aria-label="Increase Level 3">+</button></div></div>
+<div class="act"><span>Level 4</span><div class="stp"><button type="button" class="stb" data-n="n4" data-d="-1" aria-label="Decrease Level 4">−</button><input type="number" id="n4" value="0" readonly><button type="button" class="stb" data-n="n4" data-d="1" aria-label="Increase Level 4">+</button></div></div>
+<div class="act"><span>Level 5</span><div class="stp"><button type="button" class="stb" data-n="n5" data-d="-1" aria-label="Decrease Level 5">−</button><input type="number" id="n5" value="0" readonly><button type="button" class="stb" data-n="n5" data-d="1" aria-label="Increase Level 5">+</button></div></div>
+<details id="acts" style="margin-top:12px"><summary>Review deduction amounts (change if the rules change)</summary>
+<div class="g" style="margin-top:10px">
+<label>Level 1 – 0.5 day (EGP)<input type="number" id="ac1" value="167" min="0"></label>
+<label>Level 2 – 1 day (EGP)<input type="number" id="ac2" value="333" min="0"></label>
+<label>Level 3 – 2 days (EGP)<input type="number" id="ac3" value="666" min="0"></label>
+<label>Level 4 – 3 days (EGP)<input type="number" id="ac4" value="1000" min="0"></label>
+<label>Level 5 – 4 days (EGP)<input type="number" id="ac5" value="1333" min="0"></label>
+</div></details></details></section>
+
+<section><h2>KPIs <span class="sm">(previous month)</span><span class="amt" id="amt-kpi"></span></h2>
 <div class="g">
 <label>Quality % (≥<span id="qtl">85</span>)<input type="number" id="q" value="0" step="0.1"></label>
 <label>7-Day Repeats % (≤<span id="rptl">16</span>)<input type="number" id="rp" value="100" step="0.1"></label>
 <label>NPS % (≥<span id="npstl">80</span>)<input type="number" id="nps" value="0" step="0.1"></label>
-<label>ADH % (≥<span id="adhtl">92</span>)<input type="number" id="adh" value="0" step="0.1"></label>
+<label>ADH % (≥<span id="adhtl">92</span>)<input type="number" id="adh" value="100" step="0.1"></label>
 </div>
 <details id="ks"><summary>Review KPI targets &amp; weights (change if the rules change)</summary>
 <p class="hint" style="margin-top:10px">Weight = USD paid when the KPI target is met. ADH is a gate: below its target, all KPIs pay 0.</p>
@@ -237,20 +307,22 @@ body{display:flex;flex-direction:column;min-height:100vh}
 <label>ADH target (≥ %)<input type="number" id="adht" value="92" step="0.1" min="0"></label>
 </div></details></section>
 
-<section><h2>Incentives (USD)</h2>
+<section class="xr"><h2>Exchange rate <span class="sm">(USD to EGP)</span></h2><input type="number" id="rate" value="50" step="0.01" min="0" aria-label="USD to EGP exchange rate"></section>
+
+<section><h2>Incentives <span class="sm">(2 months before)</span><span class="amt" id="amt-inc"></span></h2>
 <div class="g">
 <label>Lines without port/device<input type="number" id="l0" value="0" min="0"></label>
 <label>Lines with port or device<input type="number" id="l1" value="0" min="0"></label>
 <label>Lines with port and device<input type="number" id="l2" value="0" min="0"></label>
-<label>Accounts with multiple lines<input type="number" id="acc" value="0" min="0"></label>
+<label>Created accounts with multiple lines<input type="number" id="acc" value="0" min="0"></label>
 <label>Plan upgrades<input type="number" id="pu" value="0" min="0"></label>
 <label>Device protection<input type="number" id="dp" value="0" min="0"></label>
 <label>Device upgrades<input type="number" id="du" value="0" min="0"></label>
 </div></section>
 
-<section class="part"><details id="otbox"><summary>Overtime challenge (weekly)</summary><div class="pb"><div class="oh"><a href="#ss" class="ck" id="ckss">check scheme settings</a><button type="button" class="add" id="addwk" aria-label="Add another week" title="Add another week">+</button></div>
+<section class="bk"><details><summary>Overtime?<span class="otw"> (weekly)</span> <a href="#ss" class="ck otw" id="ckss">check scheme settings</a><span class="amt" id="amt-ot"></span></summary>
+<div class="ohr" style="justify-content:space-between;margin-bottom:8px"><label class="chal"><input type="checkbox" id="chal"> Challenge is active?</label><button type="button" class="add" id="addwk" aria-label="Add another week" title="Add another week">+</button></div>
 <p class="hint" style="margin-top:6px">Enter the figures for a single week (e.g. 27 Sep – 3 Oct). Had overtime in more than one week this month? Tap + to add another week – each week is checked and paid on its own. Uses the hourly rate from Base pay. Leave overtime hours at 0 if not applicable.</p>
-<p class="hint"><b>Note:</b> Please remove lunch hours from the hours you enter, as they are not paid.</p>
 <label>Employment type
 <select id="otype"><option value="ft">Full-timer</option><option value="pt">Part-timer</option></select></label>
 <div id="wks"><div class="wk"><div class="wkh"><span class="wn">Week 1</span></div>
@@ -276,9 +348,9 @@ body{display:flex;flex-direction:column;min-height:100vh}
 <label>Bracket 2 (10–20 hrs) rate (%)<input type="number" id="br2" value="225" step="1" min="0"></label>
 <label>Bracket 3 (20–30 hrs) rate (%)<input type="number" id="br3" value="250" step="1" min="0"></label>
 <label>Bracket 4 (30+ hrs) rate (%)<input type="number" id="br4" value="300" step="1" min="0"></label>
-</div></details></div></details></section>
+</div></details></details></section>
 
-<section class="part"><details id="bkbox"><summary>Breakdown</summary><div class="pb"><div id="out"></div></div></details></section>
+<section class="bk"><details><summary>Breakdown</summary><div id="out"></div></details></section>
 </main>
 </div>
 
@@ -288,7 +360,6 @@ body{display:flex;flex-direction:column;min-height:100vh}
   <header>
     <p class="kicker">Monthly attendance</p>
     <h1>Absenteeism Calculator</h1>
-    <p>Pick the schedule, enter this month's scheduled days, the days so far and the days still to come. A day is 8.5 hours. Overtime that covers absences is added to scheduled hours as well as attended hours.</p>
   </header>
 
   <div class="tabs" role="tablist" aria-label="Schedule type">
@@ -363,7 +434,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
           <span class="unit">hrs</span>
         </div>
         <p class="hint">Added to scheduled hours and to attended hours.</p>
-        <p class="hint"><b>Note:</b> Please remove lunch hours, as they are not paid.</p>
+        <p class="callout"><b>Note:</b> the hours you enter should <b>exclude lunch</b>. Lunch is unpaid, so it does not count as overtime or as scheduled hours.</p>
       </div>
 
       <details>
@@ -411,7 +482,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
         <dt>Most absent hours allowed</dt><dd id="ab-r-allow" class="strong"></dd>
         <dt id="ab-r-buffer-label">Buffer left</dt><dd id="ab-r-buffer" class="strong"></dd>
         <dt>Absent days you can still afford</dt><dd id="ab-r-days" class="strong"></dd>
-        <dt>Extra overtime to reach target</dt><dd id="ab-r-fix" class="strong"></dd>
+        <dt class="hl">Extra overtime to reach target</dt><dd id="ab-r-fix" class="strong hl"></dd>
       </dl>
 
       <div class="scen">
@@ -437,8 +508,9 @@ const rate=$('rate'),days=$('days'),abs=$('abs'),adh=$('adh');
 const absH=$('absh');
 const hr=$('hr');
 const workH=Math.max(days*8.5-absH,0);
-const base=workH*hr;
-const transport=abs>9?0:days*$('tr');
+const lv=Math.min($('lv'),days),sl=Math.min($('sl'),Math.max(days-lv,0)),sickCut=sl*8.5*hr*0.3,base=workH*hr-sickCut;
+const transDays=Math.max(days-lv-sl,0);
+const transport=abs>9?0:transDays*$('tr');
 /* KPI targets & weights come from the "Review KPI targets & weights" panel */
 const qT=$('qt'),rT=$('rpt'),nT=$('npst'),aT=$('adht');
 ['qt','rpt','npst','adht'].forEach(k=>document.getElementById(k+'l').textContent=S(k));
@@ -459,13 +531,14 @@ const std=$('stdm')/100,minH=$('minh'),absMax=$('wabsmax');
 [1,2,3,4].forEach(i=>{BR[i][2]=$('br'+i)/100});
 const full=S('otype')==='ft',gate=full?$('gateft'):$('gatept'),flat=S('omode')==='flat';
 const mark=ok=>ok?'✓':'✗';
+const chal=document.getElementById('chal').checked;
 const W=[...document.querySelectorAll('.wk')],many=W.length>1;
 let otPay=0,otOut='';
 W.forEach((w,i)=>{
  const v=c=>parseFloat(w.querySelector(c).value)||0;
  const ot=v('.oth'),wh=v('.wh'),wabs=v('.wabs');
  const cMin=ot>=minH,cAbs=wabs<=absMax,cGate=wh>=gate;
- const elig=ot>0&&cMin&&cAbs&&cGate;
+ const elig=chal&&ot>0&&cMin&&cAbs&&cGate;
  const stdPay=ot*hr*std;
  let p=0,rows='';
  if(ot>0){
@@ -482,12 +555,12 @@ W.forEach((w,i)=>{
   }
  }
  otPay+=p;
- otOut+=`<div class="sub">Overtime challenge${many?' – Week '+(i+1):''}</div>`+
+ otOut+=`<div class="sub">Overtime${many?' – Week '+(i+1):''}</div>`+
  (ot>0?
-  R2('Min. overtime hours (≥ '+f(minH,1)+')',f(ot,1)+' hrs '+mark(cMin),cMin?'ok':'bad')+
+  (chal?R2('Min. overtime hours (≥ '+f(minH,1)+')',f(ot,1)+' hrs '+mark(cMin),cMin?'ok':'bad')+
   R2('Weekly ABS (≤ '+f(absMax,1)+'%)',f(wabs,1)+'% '+mark(cAbs),cAbs?'ok':'bad')+
   R2('Weekly hours gate ('+(full?'full-timer':'part-timer')+', ≥ '+f(gate,1)+')',f(wh,1)+' hrs '+mark(cGate),cGate?'ok':'bad')+
-  R2('Eligible for the challenge',elig?'Yes':'No → paid at standard OT rate ('+pc(std)+')',elig?'ok':'bad')+
+  R2('Eligible for the challenge',elig?'Yes':'No → paid at standard OT rate ('+pc(std)+')',elig?'ok':'bad'):R2('Challenge','Not active → standard OT rate ('+pc(std)+')'))+
   rows+
   R2('Overtime pay',f(p)+' EGP',elig?'ok':'')+
   (elig?R2('Extra vs. standard OT rate','+'+f(p-stdPay)+' EGP','ok'):'')
@@ -496,15 +569,21 @@ W.forEach((w,i)=>{
 if(many)otOut+=R2('Total overtime pay ('+W.length+' weeks)',f(otPay)+' EGP','ok');
 function R2(a,b,c){return `<div class="r"><span>${a}</span><b class="${c||''}">${b}</b></div>`}
 
-const totalEgp=base+transport+(kpi+net)*rate+otPay;
+let actDed=0,actRows='';
+[1,2,3,4,5].forEach(i=>{const n=$('n'+i);if(n){const d=n*$('ac'+i);actDed+=d;actRows+=R2('Action Level '+i+' ('+n+' × '+f($('ac'+i),0)+' EGP)','−'+f(d)+' EGP','bad')}});
+const totalEgp=base+transport+(kpi+net)*rate+otPay-actDed;
 document.getElementById('total').textContent=f(totalEgp);
+const setAmt=(id,v)=>{document.getElementById(id).textContent='= '+f(v)+' EGP'};
+setAmt('amt-base',base+transport);setAmt('amt-kpi',kpi*rate);setAmt('amt-inc',net*rate);document.getElementById('amt-inc').insertAdjacentHTML('beforeend',' <span class="sm">(after tax)</span>');setAmt('amt-ot',otPay);document.getElementById('amt-act').textContent=actDed?'= −'+f(actDed)+' EGP':'= 0.00 EGP';
 document.getElementById('totalUsd').textContent='≈ '+f(rate?totalEgp/rate:0)+' USD';
 const R=R2;
 document.getElementById('out').innerHTML=
 R('Scheduled hours',f(days*8.5,1)+' hrs')+
 R('Absent hours deducted','−'+f(absH,1)+' hrs = −'+f(absH*hr)+' EGP',absH?'bad':'')+
-R('Base salary ('+f(workH,1)+' hrs)',f(base)+' EGP')+
-R('Transportation',f(transport)+' EGP',abs>9?'bad':'')+
+R('Base salary ('+f(workH,1)+' hrs)',f(workH*hr)+' EGP')+
+(sl?R('Sick leave ('+f(sl,1)+' days, paid at 70%)','−'+f(sickCut)+' EGP','bad'):'')+
+(lv?R('Annual / casual / exam leave (paid as full days)',f(lv,1)+' days'):'')+
+R('Transportation ('+f(transDays,1)+' days)',f(transport)+' EGP',abs>9?'bad':'')+
 R('KPIs achieved (before ABS/ADH)',f(raw)+' USD')+
 R('ADH check (≥ '+f(aT,1)+'%)',adhOk?'Passed':'Failed → KPIs = 0',adhOk?'ok':'bad')+
 R('ABS multiplier',(absMult*100)+'%',absMult?'':'bad')+
@@ -517,8 +596,9 @@ R('Device upgrades (5 USD each)',f(du)+' USD')+
 R('Incentives before tax',f(gross)+' USD = '+f(gross*rate)+' EGP')+
 R('Tax (20%)','−'+f(tax)+' USD = −'+f(tax*rate)+' EGP','bad')+
 R('Incentives after tax',f(net)+' USD = '+f(net*rate)+' EGP','ok')+
-otOut;
-goal({total:totalEgp,rate,hr,days,absH,abs,adhOk,raw,absMult,transport,tr:$('tr'),net,aT,std,flat,minH,absMax,gate,
+otOut+
+'<div class="sub">Deductions</div>'+(actDed?actRows+R2('Total deductions','−'+f(actDed)+' EGP','bad'):R2('Action deductions','None'));
+goal({td:transDays,chal,total:totalEgp,rate,hr,days,absH,abs,adhOk,raw,absMult,transport,tr:$('tr'),net,aT,std,flat,minH,absMax,gate,
  flags:[['Quality (≥ '+qT+'%)',qOk,$('qw')],['7-Day Repeats (≤ '+rT+'%)',rOk,$('rpw')],['NPS (≥ '+nT+'%)',nOk,$('npsw')]],
  inc:{l0,l1,l2,acc,pu:$('pu'),dp:$('dp'),du:$('du')}});
 }
@@ -537,27 +617,21 @@ function goal(s){
  const L=[],I=[],rate=s.rate,hr=s.hr,cov=g=>g>=gap?'covers the gap':'covers '+Math.round(g/gap*100)+'% of the gap';
  if(s.absH>0&&hr>0){const g=s.absH*hr,need=gap/hr;
   L.push(need<=s.absH?`Cut about <b>${f(need,1)} absent hours</b> (each is worth ${f(hr)} EGP) – this alone covers the gap.`:`Cut all <b>${f(s.absH,1)} absent hours</b>: <b>+${f(g)} EGP</b> (${cov(g)}).`)}
- if(s.abs>9&&s.days*s.tr>0){const g=s.days*s.tr;L.push(`Bring monthly ABS to <b>9% or less</b> to get your transportation back: <b>+${f(g)} EGP</b> (${cov(g)}).`)}
+ if(s.abs>9&&s.td*s.tr>0){const g=s.td*s.tr;L.push(`Bring monthly ABS to <b>9% or less</b> to get your transportation back: <b>+${f(g)} EGP</b> (${cov(g)}).`)}
  if(s.abs>6&&s.adhOk&&s.raw>0&&s.absMult<1){const g=s.raw*(1-s.absMult)*rate;L.push(`Bring monthly ABS to <b>6% or less</b> so KPIs pay 100% instead of ${Math.round(s.absMult*100)}%: <b>+${f(g)} EGP</b> (${cov(g)}).`)}
  if(!s.adhOk){const g=s.raw*s.absMult*rate;L.push(`Raise ADH to <b>≥ ${f(s.aT,1)}%</b>, the gate for all KPIs`+(g>0?` – this unlocks <b>+${f(g)} EGP</b> (${cov(g)}).`:'.'))}
  s.flags.forEach(k=>{if(!k[1]&&s.absMult>0){const g=k[2]*s.absMult*rate;if(g>0)L.push(`Hit the <b>${k[0]}</b> KPI target: <b>+${f(g)} EGP</b> (${cov(g)})`+(s.adhOk?'.':', once ADH passes.'))}});
  if(hr>0){let ot=0,p=0;
-  for(let x=0.5;x<=80;x+=0.5){const pay=x>=s.minH?otEligPay(x,hr,s.std,s.flat):x*hr*s.std;if(pay>=gap){ot=x;p=pay;break}}
-  if(ot)L.push(`Work <b>${f(ot,1)} hrs of overtime</b> in a week`+(ot>=s.minH?` (needs ≥ ${f(s.minH,1)} hrs OT, weekly ABS ≤ ${f(s.absMax,1)}%, and ≥ ${f(s.gate,1)} hrs worked that week)`:'')+`: about <b>+${f(p)} EGP</b>.`)}
- let incTotal=0;
+  for(let x=0.5;x<=80;x+=0.5){const pay=s.chal&&x>=s.minH?otEligPay(x,hr,s.std,s.flat):x*hr*s.std;if(pay>=gap){ot=x;p=pay;break}}
+  if(ot)L.push(`Work <b>${f(ot,1)} hrs of overtime</b> in a week`+(s.chal&&ot>=s.minH?` (needs ≥ ${f(s.minH,1)} hrs OT, weekly ABS ≤ ${f(s.absMax,1)}%, and ≥ ${f(s.gate,1)} hrs worked that week)`:'')+`: about <b>+${f(p)} EGP</b>.`)}
  if(rate>0){const want=s.net+gap/rate;
-  const T=[['l1','lines with port or device'],['dp','device protection'],['pu','plan upgrades'],['du','device upgrades']],W={l1:0.70,dp:0.12,pu:0.12,du:0.06},sc=k=>val[k]/(W[k]||1);
-  const a=Object.assign({},s.inc),val={},cnt={};T.forEach(t=>{val[t[0]]=0;cnt[t[0]]=0});
-  const start=incNet(a);let ok=false;
-  for(let n=0;n<600;n++){
-   let best=T[0][0];T.forEach(t=>{if(sc(t[0])<sc(best))best=t[0]});
-   const before=incNet(a);a[best]++;val[best]+=incNet(a)-before;cnt[best]++;
-   if(incNet(a)>=want){ok=true;break}}
-  if(ok){T.forEach(t=>{if(cnt[t[0]])I.push(`<b>+${cnt[t[0]]}</b> ${t[1]}`)});incTotal=(incNet(a)-start)*rate}}
- if(I.length)L.push(`Or earn it from incentives, about 70% from lines with port or device, the rest from device protection and plan upgrades (device upgrades only as a small extra). Add this mix on top of today’s figures (about <b>+${f(incTotal)} EGP</b> after 20% tax):<ul>`+I.map(x=>'<li>'+x+'</li>').join('')+`</ul>`);
+  [['l0','lines without port/device'],['l1','lines with port or device'],['l2','lines with port and device'],['acc','created accounts with multiple lines'],['pu','plan upgrades'],['dp','device protection'],['du','device upgrades']].forEach(t=>{
+   let k=0;for(let n=1;n<=300;n++){const a=Object.assign({},s.inc);a[t[0]]+=n;if(incNet(a)>=want){k=n;break}}
+   if(k)I.push(`<b>+${k}</b> ${t[1]}`)})}
+ if(I.length)L.push(`Or earn it from incentives. Any <b>one</b> of these on top of today's figures (after 20% tax):<ul>`+I.map(x=>'<li>'+x+'</li>').join('')+`</ul>`);
  h+=`<div class='sub'>Ways to close the gap</div>`;
  h+=L.length?`<ul class='note' style='margin-top:8px'>`+L.map(x=>'<li>'+x+'</li>').join('')+`</ul>`:`<p class='hint' style='margin:10px 0 0'>No single change here gets you there. Try combining several.</p>`;
- h+=`<p class='hint' style='margin:6px 0 0'>Ideas are estimated from your current inputs, and the incentive mix puts about 70% on lines with port or device, with the rest on device protection and plan upgrades, leaving out other line types and multi-line accounts. Incentives are paid 2 months later.</p>`;
+ h+=`<p class='hint' style='margin:6px 0 0'>Each idea is estimated on its own from your current inputs, so combining them gives a similar total. Incentives are paid 2 months later.</p>`;
  out.innerHTML=h;
 }
 /* Weeks: + clones week 1 (max 5 – a month spans at most 5 weeks), × removes; weeks are renumbered */
@@ -567,10 +641,11 @@ add.addEventListener('click',()=>{
  const w=wks.firstElementChild.cloneNode(true);
  w.querySelectorAll('input').forEach(i=>i.value=0);
  w.querySelector('.wkh').insertAdjacentHTML('beforeend','<button type="button" class="x" aria-label="Remove week" title="Remove week">×</button>');
- wks.appendChild(w);wkSync();w.querySelector('.wh').focus();
+ wks.appendChild(w);wkSync();if(!window.__restoring)w.querySelector('.wh').focus();
 });
 wks.addEventListener('click',e=>{if(e.target.classList.contains('x')){e.target.closest('.wk').remove();wkSync()}});
-document.getElementById('ckss').addEventListener('click',()=>{document.getElementById('ss').open=true});
+document.getElementById('ckss').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const s=document.getElementById('ss');s.open=true;s.scrollIntoView({block:'center'})});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.stb');if(!b)return;const i=document.getElementById(b.dataset.n);i.value=Math.max(0,(parseInt(i.value)||0)+parseInt(b.dataset.d));calc()});
 document.addEventListener('input',calc);document.addEventListener('change',calc);
 calc();
 </script>
@@ -589,8 +664,8 @@ calc();
   };
   // "up" empty means automatic (scheduled days minus attended minus absent).
   var state = {
-    full: { sched: "22", att: "9", abs: "2", up: "", late: "0", ot: "0" },
-    p3: { sched: "16", att: "7", abs: "1", up: "", late: "0", ot: "0" },
+    full: { sched: "22", att: "9", abs: "0", up: "", late: "0", ot: "0" },
+    p3: { sched: "16", att: "7", abs: "0", up: "", late: "0", ot: "0" },
     p4: { sched: "12", att: "5", abs: "0", up: "", late: "0", ot: "0" }
   };
   var current = "full";
@@ -751,8 +826,177 @@ calc();
     els.att.focus();
   });
 
+  // Used by the login/save script to store and restore this tab's numbers.
+  window.absIO = {
+    get: function () { saveCurrent(); return { state: JSON.parse(JSON.stringify(state)), current: current, target: els.target.value }; },
+    set: function (d) {
+      if (!d || !d.state) return;
+      Object.keys(TYPES).forEach(function (k) { if (d.state[k]) state[k] = d.state[k]; });
+      if (TYPES[d.current]) current = d.current;
+      if (d.target !== undefined) els.target.value = d.target;
+      Object.keys(TYPES).forEach(function (k) { byId("ab-tab-" + k).setAttribute("aria-selected", k === current ? "true" : "false"); });
+      loadCurrent();
+      render();
+    }
+  };
+
   loadCurrent();
   render();
+})();
+</script>
+
+<!-- ===================== LOGIN + SAVING (Supabase) ===================== -->
+<script>
+(function () {
+  /* Fill these in from Supabase: Project Settings > API. The anon key is safe to publish. */
+  var SUPABASE_URL = '';
+  var SUPABASE_ANON_KEY = '';
+  var ALLOWED_DOMAIN = 'yourcompany.com';
+
+  var $i = function (id) { return document.getElementById(id); };
+  // Not set up yet: the calculator just works without login or saving.
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase) return;
+
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var wall = $i('authwall'), form = $i('authform'), loadEl = $i('authload'), msg = $i('amsg');
+  var mode = 'in', user = null, ready = false, timer = null, recovery = false;
+  wall.hidden = false;
+
+  function say(t, bad) { msg.textContent = t; msg.className = 'amsg' + (bad ? ' bad' : ''); }
+  function status(t, bad) { var s = $i('savest'); s.textContent = t; s.style.color = bad ? 'var(--bad)' : ''; }
+  function setMode(m) {
+    mode = m;
+    Array.prototype.forEach.call(document.querySelectorAll('.atab'), function (b) { b.setAttribute('aria-selected', b.getAttribute('data-m') === m ? 'true' : 'false'); });
+    $i('asubmit').textContent = m === 'in' ? 'Log in' : 'Sign up';
+    $i('apass').autocomplete = m === 'in' ? 'current-password' : 'new-password';
+    say('');
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('.atab'), function (b) {
+    b.addEventListener('click', function () { setMode(b.getAttribute('data-m')); });
+  });
+
+  /* ---- collect / apply the numbers ---- */
+  function collect() {
+    var d = { f: {}, weeks: [] };
+    Array.prototype.forEach.call(document.querySelectorAll('#salary-view input[id], #salary-view select[id]'), function (e) {
+      d.f[e.id] = e.type === 'checkbox' ? e.checked : e.value;
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#wks .wk'), function (w) {
+      d.weeks.push({ wh: w.querySelector('.wh').value, oth: w.querySelector('.oth').value, wabs: w.querySelector('.wabs').value });
+    });
+    d.abs = window.absIO ? window.absIO.get() : null;
+    return d;
+  }
+  function apply(d) {
+    if (!d) return;
+    window.__restoring = true;
+    try {
+      var wk = $i('wks'), n = Math.min(5, Math.max(1, (d.weeks && d.weeks.length) || 1));
+      while (wk.children.length < n) $i('addwk').click();
+      while (wk.children.length > n) wk.lastElementChild.remove();
+      (d.weeks || []).forEach(function (x, i) {
+        var w = wk.children[i]; if (!w) return;
+        w.querySelector('.wh').value = x.wh; w.querySelector('.oth').value = x.oth; w.querySelector('.wabs').value = x.wabs;
+      });
+      Object.keys(d.f || {}).forEach(function (id) {
+        var e = $i(id);
+        if (!e || !$i('salary-view').contains(e)) return;
+        if (e.type === 'checkbox') e.checked = !!d.f[id]; else e.value = d.f[id];
+      });
+      if (d.abs && window.absIO) window.absIO.set(d.abs);
+    } finally { window.__restoring = false; }
+    wkSync();
+  }
+
+  /* ---- load / save ---- */
+  async function loadData() {
+    ready = false; status('Loading…');
+    var r = await sb.from('salary_entries').select('data').eq('user_id', user.id).maybeSingle();
+    if (r.error) { status('Could not load your saved numbers', true); return; }
+    if (r.data) apply(r.data.data);
+    ready = true; status('Saved');
+  }
+  async function save() {
+    if (!user || !ready) return;
+    status('Saving…');
+    var r = await sb.from('salary_entries').upsert({ user_id: user.id, data: collect(), updated_at: new Date().toISOString() });
+    status(r.error ? 'Not saved. Check your connection' : 'Saved', !!r.error);
+  }
+  function queue() { if (!user || !ready) return; clearTimeout(timer); status('Unsaved changes…'); timer = setTimeout(function () { timer = null; save(); }, 1200); }
+  ['input', 'change', 'click'].forEach(function (ev) {
+    document.addEventListener(ev, function (e) {
+      var t = e.target;
+      if (!t || !t.closest || t.closest('#authwall')) return;
+      if (ev === 'click' && !t.closest('.stb, #addwk, .x, .stab, #ab-reset')) return;
+      queue();
+    });
+  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && timer) { clearTimeout(timer); timer = null; save(); } });
+
+  /* ---- screens ---- */
+  function showApp(u) {
+    user = u; wall.hidden = true;
+    $i('acct').hidden = false; $i('acctmail').textContent = u.email;
+    loadData();
+  }
+  function showLogin() {
+    user = null; ready = false; $i('acct').hidden = true;
+    loadEl.hidden = true; $i('newpass').hidden = true; form.hidden = false; wall.hidden = false;
+  }
+
+  sb.auth.getSession().then(function (r) {
+    var s = r.data && r.data.session;
+    if (s) showApp(s.user); else if (!recovery) showLogin();
+  });
+  sb.auth.onAuthStateChange(function (ev, s) {
+    if (ev === 'PASSWORD_RECOVERY') {
+      recovery = true; wall.hidden = false; loadEl.hidden = true; form.hidden = true; $i('newpass').hidden = false;
+    } else if (ev === 'SIGNED_OUT') {
+      showLogin();
+    } else if (ev === 'SIGNED_IN' && s && !recovery && (!user || user.id !== s.user.id)) {
+      showApp(s.user);
+    }
+  });
+
+  /* ---- log in / sign up ---- */
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var em = $i('aemail').value.trim().toLowerCase(), pw = $i('apass').value;
+    if (mode === 'up' && !em.endsWith('@' + ALLOWED_DOMAIN)) { say('Use your @' + ALLOWED_DOMAIN + ' work email.', true); return; }
+    if (pw.length < 8) { say('Password must be at least 8 characters.', true); return; }
+    $i('asubmit').disabled = true; say('Please wait…');
+    try {
+      if (mode === 'in') {
+        var r = await sb.auth.signInWithPassword({ email: em, password: pw });
+        if (r.error) say(r.error.message, true); else say('');
+      } else {
+        var r2 = await sb.auth.signUp({ email: em, password: pw, options: { emailRedirectTo: location.origin + location.pathname } });
+        if (r2.error) say(r2.error.message, true);
+        else if (!r2.data.session) say('Check your email and click the confirmation link, then log in.');
+      }
+    } catch (err) { say('Something went wrong. Please try again.', true); }
+    $i('asubmit').disabled = false;
+  });
+  $i('aforgot').addEventListener('click', async function (e) {
+    e.preventDefault();
+    var em = $i('aemail').value.trim().toLowerCase();
+    if (!em) { say('Enter your email above first.', true); return; }
+    var r = await sb.auth.resetPasswordForEmail(em, { redirectTo: location.origin + location.pathname });
+    say(r.error ? r.error.message : 'If this email has an account, a reset link is on its way.', !!r.error);
+  });
+  $i('newpass').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var r = await sb.auth.updateUser({ password: $i('np').value });
+    if (r.error) { $i('npmsg').textContent = r.error.message; $i('npmsg').className = 'amsg bad'; return; }
+    recovery = false;
+    var g = await sb.auth.getSession();
+    if (g.data && g.data.session) showApp(g.data.session.user); else showLogin();
+  });
+  $i('logout').addEventListener('click', async function () {
+    if (timer) { clearTimeout(timer); timer = null; await save(); }
+    await sb.auth.signOut();
+    location.reload();
+  });
 })();
 </script>
 
