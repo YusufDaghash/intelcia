@@ -226,6 +226,7 @@ body{display:flex;flex-direction:column;min-height:100vh}
    <p id="amsg" class="amsg" role="status"></p>
    <a href="#" id="aforgot" class="ck">Forgot password?</a>
   </form>
+   <button type="button" id="aguest" class="atab">Continue as guest</button>
   <form id="newpass" hidden>
    <label>New password<input type="password" id="np" autocomplete="new-password" minlength="8" required></label>
    <button type="submit" class="abtn">Save new password</button>
@@ -992,6 +993,9 @@ calc();
     var g = await sb.auth.getSession();
     if (g.data && g.data.session) showApp(g.data.session.user); else showLogin();
   });
+  $i('aguest').addEventListener('click', function () {
+  wall.hidden = true;
+});
   $i('logout').addEventListener('click', async function () {
     if (timer) { clearTimeout(timer); timer = null; await save(); }
     await sb.auth.signOut();
