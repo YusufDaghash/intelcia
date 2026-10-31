@@ -849,9 +849,9 @@ calc();
 <script>
 (function () {
   /* Fill these in from Supabase: Project Settings > API. The anon key is safe to publish. */
-  var SUPABASE_URL = '';
-  var SUPABASE_ANON_KEY = '';
-  var ALLOWED_DOMAIN = 'yourcompany.com';
+  var SUPABASE_URL = 'sb_publishable_4nm9HExcXtV_xqFCNPNqng_J0VbLrpK';
+  var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGpwemxmbXZ3am5qbmd5Z3BqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0MDc3MDgsImV4cCI6MjEwODk4MzcwOH0.ZKn1cAidk3ud_paizELBOI9iMjj7ivXE-YKffIkumec';
+  var ALLOWED_DOMAINS = ['intelcia.com', 'gmail.com', 'outlook.com', 'optimum'];
 
   var $i = function (id) { return document.getElementById(id); };
   // Not set up yet: the calculator just works without login or saving.
@@ -962,7 +962,7 @@ calc();
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     var em = $i('aemail').value.trim().toLowerCase(), pw = $i('apass').value;
-    if (mode === 'up' && !em.endsWith('@' + ALLOWED_DOMAIN)) { say('Use your @' + ALLOWED_DOMAIN + ' work email.', true); return; }
+    if (mode === 'up' && !ALLOWED_DOMAINS.some(function (d) { return em.endsWith('@' + d); })) { say('Use one of these emails: ' + ALLOWED_DOMAINS.map(function (d) { return '@' + d; }).join(', '), true); return; }
     if (pw.length < 8) { say('Password must be at least 8 characters.', true); return; }
     $i('asubmit').disabled = true; say('Please wait…');
     try {
